@@ -1,0 +1,74 @@
+# $TALN mint guide for AI agents
+
+Website: https://taln.live · Whitepaper: https://taln.live/whitepaper · Live JSON: https://taln.live/api/stats
+
+The token is **$TALN** (symbol TALN). This is the first and only $TALN guide.
+
+$TALN is LIVE on BNB Smart Chain mainnet (chainId 56) — the addresses below
+are the live mainnet deployment (2026-10-31). Fund flow: 100% of every mint
+payment goes straight to the treasury wallet
+`0x8d2f8b1f8a02474447025bdd34b06a8a95b41643`; the mint contract keeps
+nothing. Trading (wallet-to-wallet transfers) unlocks once 10,000 shares
+have been minted in total.
+
+## Contracts (BNB Smart Chain, chainId 56)
+
+- $TALN mint contract: `0x045e7aAf012e906830b9B6550755440338C20cb4` (the ONLY address that accepts payment)
+- $TALN token: `0x2417629B090D811FE64271D010986b0dE81FA9e5` (18 decimals). For adding the token to a wallet only. **Never send BNB or USDT to the token address**; it does not mint and the funds are lost.
+- Payment token: USDT (BEP-20) `0x55d398326f99059fF775485246999027B3197955` (18 decimals).
+- Identity verifier: `0x70f0987F7eB1dC137Ca778cA821922F0ba95Ecc3`. It verifies Agent IDs on-chain against the SPACE ID HandleRegistry (`0x60b9262456de011f7d15a54cdd8c48baaa8b022f`): a wallet whose address resolves to a non-empty handle is verified.
+- Treasury: `0x8d2f8b1f8a02474447025bdd34b06a8a95b41643`
+
+## Do NOT use
+
+There are no retired $TALN contracts yet. Any address claiming to sell or mint
+$TALN other than the mint contract above is not ours — never send BNB or USDT
+to it. (A separate $TALN deployment exists on BSC Testnet, chainId 97, for
+testing only; its assets have no real value and it is not this guide.)
+
+## Status right now
+
+- Minting open: yes, on BNB Smart Chain mainnet. Live values (total minted, current price, quotes) are served at https://taln.live/api/stats, generated from live contract reads — they override this snapshot.
+- Shares minted: 0 (at deployment; see /api/stats for the live count)
+- Price: 1.0 USDT per share (Tier 1 of a 353-tier ladder, 1U up to 8.07U; every share pays exactly 100,000,000 $TALN — the token amount is fixed and does not float with any pool price)
+- Max 10 shares per transaction
+
+## Who can mint
+
+The sending wallet must hold a `.ai` Agent ID on BNB Smart Chain (Binance Agentic Wallet). Each Agent ID can mint 10 shares, plus 1 per invite and per social task. Check a wallet: `https://taln.live/api/verify?address=<wallet>` (live; reads the SPACE ID HandleRegistry on BNB Smart Chain mainnet). The mint contract enforces the same check on-chain through the identity verifier above.
+
+## Option A: pay with BNB (contract call)
+
+Call `mintWithBnb(uint256 shares, address referrer, uint256 maxCost)` (selector 0xe38fd349) on the mint contract, sending the "send BNB" amount as value and passing the same amount as maxCost. Use the zero address if there is no referrer. The contract converts the USDT tier cost at its BNB/USD rate (Chainlink BNB/USD feed on BSC mainnet, with an admin-set fallback rate), charges only the actual cost, and refunds any BNB above it on the spot. Read the live quote with `quoteBnb(uint256 shares)` (selector 0x1d493476), or the USDT cost with `quoteUsdt(uint256 shares)` (selector 0x28a7184d). Add 20% to the gas estimate.
+
+**A plain BNB transfer to the mint contract does not mint; it reverts.**
+
+Quotes below are the deployed contract's Tier 1 quotes (1.0 USDT/share,
+BNB/USD ≈ 699 per the Chainlink feed) at 0 shares minted — the contract
+quotes on-chain, so check /api/stats or `quoteBnb` for live numbers as the
+tiers advance and the feed moves.
+send BNB = quote × 1.02 (price-drift buffer):
+
+| shares | cost (USDT) | quote BNB | send BNB |
+|---|---|---|---|
+| 1 | 1 | 0.001430349148227083 | 0.001458956131191625 |
+| 2 | 2 | 0.002860698296454165 | 0.002917912262383249 |
+| 3 | 3 | 0.004291047444681247 | 0.004376868393574872 |
+| 4 | 4 | 0.005721396592908329 | 0.005835824524766496 |
+| 5 | 5 | 0.007151745741135412 | 0.007294780655958121 |
+| 6 | 6 | 0.008582094889362494 | 0.008753736787149744 |
+| 7 | 7 | 0.010012444037589576 | 0.010212692918341368 |
+| 8 | 8 | 0.011442793185816658 | 0.011671649049532992 |
+| 9 | 9 | 0.012873142334043741 | 0.013130605180724616 |
+| 10 | 10 | 0.014303491482270823 | 0.01458956131191624 |
+
+## Option B: pay with USDT (contract calls)
+
+1. Call USDT `approve(spender, amount)` (selector 0x095ea7b3) with spender = the mint contract and amount = cost × 1.02.
+2. Call `mint(uint256 shares, address referrer, uint256 maxCost)` (selector 0x836a1040) on the mint contract with maxCost = cost × 1.02. The contract charges only the actual tier cost. Use the zero address if there is no referrer. Add 20% to the gas estimate.
+
+**Never transfer USDT directly to the mint contract.** A plain USDT transfer does not mint anything.
+
+## Option C: use the website
+
+Open https://taln.live and connect with your Binance Agentic Wallet (the agent-wallet sign-in), choose 1-10 shares, and press Mint. The site builds the transaction, shows you a preview, and after you confirm on the site you approve it in your Binance app; the mint is then executed on BNB Smart Chain mainnet (chainId 56).
